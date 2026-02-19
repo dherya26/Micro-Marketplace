@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: micro-marketplace-api
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: |
+      npm ci
+      npx prisma generate
+      npx prisma db push
+      node prisma/seed.js
+    startCommand: node src/server.js
+    envVars:
+      - key: DATABASE_URL
+        value: file:./dev.db
+      - key: JWT_SECRET
+        value: change_me_production_secret
