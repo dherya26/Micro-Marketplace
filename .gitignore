@@ -1,0 +1,24 @@
+# Ignore dependencies and local artifacts
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+**/.env
+
+# SQLite DB file (use migrations + seed instead)
+backend/dev.db
+
+# Prisma generated code
+backend/generated/
+backend/generated/prisma/
+
+# Vite build output / cache
+web/dist/
+web/.vite/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
