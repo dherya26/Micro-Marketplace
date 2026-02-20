@@ -1,11 +1,7 @@
-import pkg from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3';
 import bcrypt from 'bcrypt';
-import dotenv from 'dotenv';
 
-dotenv.config();
-
-const { PrismaClient } = pkg;
 const adapter = new PrismaBetterSqlite3({ url: process.env.DATABASE_URL || 'file:./dev.db' });
 const prisma = new PrismaClient({ adapter });
 
@@ -15,33 +11,39 @@ async function main() {
   await prisma.product.deleteMany();
   await prisma.user.deleteMany();
 
-  // Create users
-  const password1 = await bcrypt.hash('password123', 10);
-  const password2 = await bcrypt.hash('password456', 10);
+  // Create users with hashed passwords
+  const usersData = [
+    { email: 'alice@example.com', name: 'Alice', password: 'password123' },
+    { email: 'bob@example.com', name: 'Bob', password: 'password123' },
+  ];
 
-  const user1 = await prisma.user.create({ data: { email: 'alice@example.com', name: 'Alice', password: password1 } });
-  const user2 = await prisma.user.create({ data: { email: 'bob@example.com', name: 'Bob', password: password2 } });
+  const users = [];
+  for (const u of usersData) {
+    const hash = await bcrypt.hash(u.password, 10);
+    const user = await prisma.user.create({ data: { email: u.email, name: u.name, password: hash } });
+    users.push(user);
+  }
 
   // Create products
-  const productsData = Array.from({ length: 10 }).map((_, i) => ({
+  const productsData = Array.from({ length: 20 }).map((_, i) => ({
     title: `Product ${i + 1}`,
-    price: Number(((i + 1) * 10.99).toFixed(2)),
-    description: `This is the description for Product ${i + 1}. It is a great item you will love!`,
+    price: parseFloat((Math.random() * 100).toFixed(2)),
+    description: `Description for product ${i + 1}`,
     image: `https://picsum.photos/seed/${i + 1}/400/300`,
   }));
 
-  const products = await prisma.$transaction(
-    productsData.map((data) => prisma.product.create({ data }))
-  );
+  await prisma.product.createMany({ data: productsData });
+  const created = await prisma.product.findMany();
 
-  // Favorite some products for user1 and user2
-  await prisma.favorite.create({ data: { userId: user1.id, productId: products[0].id } });
-  await prisma.favorite.create({ data: { userId: user1.id, productId: products[1].id } });
-  await prisma.favorite.create({ data: { userId: user2.id, productId: products[2].id } });
+  // Assign favorites
+  for (const user of users) {
+    const sample = created.sort(() => 0.5 - Math.random()).slice(0, 5);
+    for (const p of sample) {
+      await prisma.favorite.create({ data: { userId: user.id, productId: p.id } });
+    }
+  }
 
-  console.log('Seed completed. Test users:');
-  console.log('alice@example.com / password123');
-  console.log('bob@example.com / password456');
+  console.log('Database seeded successfully');
 }
 
 main()
